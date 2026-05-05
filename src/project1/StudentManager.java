@@ -65,6 +65,18 @@ public class StudentManager {
     }
     System.out.println("Student with ID " + id + " not found.");
 }
+    public void updateStudent(int id, String newName, String newBranch, double newCgpa) {
+        for (Student s : studentList) {
+            if (s.id == id) {
+                s.name = newName;
+                s.branch = newBranch;
+                s.cgpa = newCgpa;
+                System.out.println("Student updated successfully!");
+                return;
+            }
+        }
+        System.out.println("Student with ID " + id + " not found.");
+    }
 
     public static void main(String[] args) {
         StudentManager manager = new StudentManager();
@@ -72,10 +84,13 @@ public class StudentManager {
         manager.addStudent(1, "Lokesh", "CSE", 8.5);
         manager.addStudent(2, "Rahul", "ECE", 7.9);
         manager.addStudent(3, "Priya", "IT", 9.1);
+      
         manager.searchStudent(3);
         manager.searchStudent(99);
         manager.displayAll();
         manager.deleteStudent(2);
+        manager.displayAll();
+        manager.updateStudent(1, "Lokesh Kumar", "CSE", 9.0);
         manager.displayAll();
     }
 }

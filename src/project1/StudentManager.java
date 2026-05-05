@@ -65,6 +65,7 @@ public class StudentManager {
     }
     System.out.println("Student with ID " + id + " not found.");
 }
+//    added update student feature 
     public void updateStudent(int id, String newName, String newBranch, double newCgpa) {
         for (Student s : studentList) {
             if (s.id == id) {

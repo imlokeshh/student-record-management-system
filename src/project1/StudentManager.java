@@ -1,6 +1,11 @@
 package project1;
 import java.util.ArrayList;
 
+class DuplicateStudentException extends Exception{
+    public DuplicateStudentException(String message){
+        super(message);
+    }
+}
 class Student {
     int id;
     String name;
@@ -27,11 +32,19 @@ public class StudentManager {
 
     ArrayList<Student> studentList = new ArrayList<>();
 
-    public void addStudent(int id, String name, String branch, double cgpa) {
-        Student s = new Student(id, name, branch, cgpa);
-        studentList.add(s);
-        System.out.println("Student added: " + name);
+    public void addStudent(int id, String name, String branch, double cgpa) 
+    throws DuplicateStudentException {
+    for (Student s : studentList) {
+        if (s.id == id) {
+            throw new DuplicateStudentException(
+                "Student with ID " + id + " already exists!"
+            );
+        }
     }
+    Student s = new Student(id, name, branch, cgpa);
+    studentList.add(s);
+    System.out.println("Student added: " + name);
+}
 
     public void displayAll() {
         if (studentList.isEmpty()) {
@@ -80,18 +93,16 @@ public class StudentManager {
     }
 
     public static void main(String[] args) {
-        StudentManager manager = new StudentManager();
+    StudentManager manager = new StudentManager();
 
+    try {
         manager.addStudent(1, "Lokesh", "CSE", 8.5);
         manager.addStudent(2, "Rahul", "ECE", 7.9);
-        manager.addStudent(3, "Priya", "IT", 9.1);
-      
-        manager.searchStudent(3);
-        manager.searchStudent(99);
-        manager.displayAll();
-        manager.deleteStudent(2);
-        manager.displayAll();
-        manager.updateStudent(1, "Lokesh Kumar", "CSE", 9.0);
-        manager.displayAll();
+        manager.addStudent(1, "Priya", "IT", 9.1); // duplicate ID!
+    } catch (DuplicateStudentException e) {
+        System.out.println("Error: " + e.getMessage());
     }
+
+    manager.displayAll();
+}
 }

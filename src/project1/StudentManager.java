@@ -1,11 +1,14 @@
 package project1;
-import java.util.ArrayList;
 
-class DuplicateStudentException extends Exception{
-    public DuplicateStudentException(String message){
+import java.sql.*;
+import java.util.Scanner;
+
+class DuplicateStudentException extends Exception {
+    public DuplicateStudentException(String message) {
         super(message);
     }
 }
+
 class Student {
     int id;
     String name;
@@ -30,79 +33,188 @@ class Student {
 
 public class StudentManager {
 
-    ArrayList<Student> studentList = new ArrayList<>();
+    static final String URL = "jdbc:mysql://localhost:3306/studentdb";
+    static final String USER = "root";
+    static final String PASSWORD = "Admin1234";
 
-    public void addStudent(int id, String name, String branch, double cgpa) 
-    throws DuplicateStudentException {
-    for (Student s : studentList) {
-        if (s.id == id) {
-            throw new DuplicateStudentException(
-                "Student with ID " + id + " already exists!"
-            );
+    public static Connection getConnection() throws SQLException {
+        return DriverManager.getConnection(URL, USER, PASSWORD);
+    }
+
+    // Add student
+    public void addStudent(int id, String name, String branch, double cgpa)
+            throws DuplicateStudentException {
+        String checkQuery = "SELECT id FROM students WHERE id = ?";
+        String insertQuery = "INSERT INTO students VALUES (?, ?, ?, ?)";
+        try (Connection conn = getConnection();
+             PreparedStatement checkPs = conn.prepareStatement(checkQuery)) {
+            checkPs.setInt(1, id);
+            ResultSet rs = checkPs.executeQuery();
+            if (rs.next()) {
+                throw new DuplicateStudentException(
+                    "Student with ID " + id + " already exists!");
+            }
+            try (PreparedStatement insertPs = conn.prepareStatement(insertQuery)) {
+                insertPs.setInt(1, id);
+                insertPs.setString(2, name);
+                insertPs.setString(3, branch);
+                insertPs.setDouble(4, cgpa);
+                insertPs.executeUpdate();
+                System.out.println("Student added: " + name);
+            }
+        } catch (SQLException e) {
+            System.out.println("Error adding student: " + e.getMessage());
         }
     }
-    Student s = new Student(id, name, branch, cgpa);
-    studentList.add(s);
-    System.out.println("Student added: " + name);
-}
 
+    // Display all students
     public void displayAll() {
-        if (studentList.isEmpty()) {
-            System.out.println("No students found.");
-            return;
-        }
-        System.out.println("===== All Students =====");
-        for (Student s : studentList) {
-            s.displayInfo();
+        String query = "SELECT * FROM students";
+        try (Connection conn = getConnection();
+             Statement st = conn.createStatement();
+             ResultSet rs = st.executeQuery(query)) {
+            System.out.println("===== All Students =====");
+            while (rs.next()) {
+                System.out.println("ID: " + rs.getInt("id"));
+                System.out.println("Name: " + rs.getString("name"));
+                System.out.println("Branch: " + rs.getString("branch"));
+                System.out.println("CGPA: " + rs.getDouble("cgpa"));
+                System.out.println("-------------------");
+            }
+        } catch (SQLException e) {
+            System.out.println("Error displaying students: " + e.getMessage());
         }
     }
 
-    public void deleteStudent(int id) {
-        for (int i = 0; i < studentList.size(); i++) {
-            if (studentList.get(i).id == id) {
-                System.out.println("Deleted: " + studentList.get(i).name);
-                studentList.remove(i);
-                return;
-            }
-        }
-        System.out.println("Student with ID " + id + " not found.");
-        
-    }
+    // Search student by ID
     public void searchStudent(int id) {
-    for (Student s : studentList) {
-        if (s.id == id) {
-            System.out.println("Student found:");
-            s.displayInfo();
-            return;
+        String query = "SELECT * FROM students WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(query)) {
+            ps.setInt(1, id);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                System.out.println("Student found:");
+                System.out.println("ID: " + rs.getInt("id"));
+                System.out.println("Name: " + rs.getString("name"));
+                System.out.println("Branch: " + rs.getString("branch"));
+                System.out.println("CGPA: " + rs.getDouble("cgpa"));
+                System.out.println("-------------------");
+            } else {
+                System.out.println("Student with ID " + id + " not found.");
+            }
+        } catch (SQLException e) {
+            System.out.println("Error searching student: " + e.getMessage());
         }
     }
-    System.out.println("Student with ID " + id + " not found.");
-}
-//    added update student feature 
+
+    // Update student
     public void updateStudent(int id, String newName, String newBranch, double newCgpa) {
-        for (Student s : studentList) {
-            if (s.id == id) {
-                s.name = newName;
-                s.branch = newBranch;
-                s.cgpa = newCgpa;
+        String query = "UPDATE students SET name=?, branch=?, cgpa=? WHERE id=?";
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(query)) {
+            ps.setString(1, newName);
+            ps.setString(2, newBranch);
+            ps.setDouble(3, newCgpa);
+            ps.setInt(4, id);
+            int rows = ps.executeUpdate();
+            if (rows > 0) {
                 System.out.println("Student updated successfully!");
-                return;
+            } else {
+                System.out.println("Student with ID " + id + " not found.");
             }
+        } catch (SQLException e) {
+            System.out.println("Error updating student: " + e.getMessage());
         }
-        System.out.println("Student with ID " + id + " not found.");
+    }
+
+    // Delete student
+    public void deleteStudent(int id) {
+        String query = "DELETE FROM students WHERE id=?";
+        try (Connection conn = getConnection();
+             PreparedStatement ps = conn.prepareStatement(query)) {
+            ps.setInt(1, id);
+            int rows = ps.executeUpdate();
+            if (rows > 0) {
+                System.out.println("Student deleted successfully!");
+            } else {
+                System.out.println("Student with ID " + id + " not found.");
+            }
+        } catch (SQLException e) {
+            System.out.println("Error deleting student: " + e.getMessage());
+        }
     }
 
     public static void main(String[] args) {
-    StudentManager manager = new StudentManager();
+        StudentManager manager = new StudentManager();
+        Scanner scanner = new Scanner(System.in);
+        int choice;
 
-    try {
-        manager.addStudent(1, "Lokesh", "CSE", 8.5);
-        manager.addStudent(2, "Rahul", "ECE", 7.9);
-        manager.addStudent(1, "Priya", "IT", 9.1); // duplicate ID!
-    } catch (DuplicateStudentException e) {
-        System.out.println("Error: " + e.getMessage());
+        do {
+            System.out.println("\n===== STUDENT RECORD MANAGEMENT SYSTEM =====");
+            System.out.println("1. Add Student");
+            System.out.println("2. Display All Students");
+            System.out.println("3. Search Student by ID");
+            System.out.println("4. Update Student");
+            System.out.println("5. Delete Student");
+            System.out.println("6. Exit");
+            System.out.print("Enter your choice: ");
+            choice = scanner.nextInt();
+
+            switch (choice) {
+                case 1:
+                    System.out.print("Enter ID: ");
+                    int id = scanner.nextInt();
+                    System.out.print("Enter Name: ");
+                    String name = scanner.next();
+                    System.out.print("Enter Branch: ");
+                    String branch = scanner.next();
+                    System.out.print("Enter CGPA: ");
+                    double cgpa = scanner.nextDouble();
+                    try {
+                        manager.addStudent(id, name, branch, cgpa);
+                    } catch (DuplicateStudentException e) {
+                        System.out.println("Error: " + e.getMessage());
+                    }
+                    break;
+
+                case 2:
+                    manager.displayAll();
+                    break;
+
+                case 3:
+                    System.out.print("Enter ID to search: ");
+                    int searchId = scanner.nextInt();
+                    manager.searchStudent(searchId);
+                    break;
+
+                case 4:
+                    System.out.print("Enter ID to update: ");
+                    int updateId = scanner.nextInt();
+                    System.out.print("Enter new Name: ");
+                    String newName = scanner.next();
+                    System.out.print("Enter new Branch: ");
+                    String newBranch = scanner.next();
+                    System.out.print("Enter new CGPA: ");
+                    double newCgpa = scanner.nextDouble();
+                    manager.updateStudent(updateId, newName, newBranch, newCgpa);
+                    break;
+
+                case 5:
+                    System.out.print("Enter ID to delete: ");
+                    int deleteId = scanner.nextInt();
+                    manager.deleteStudent(deleteId);
+                    break;
+
+                case 6:
+                    System.out.println("Thank you for using Student Record Management System!");
+                    break;
+
+                default:
+                    System.out.println("Invalid choice! Please try again.");
+            }
+        } while (choice != 6);
+
+        scanner.close();
     }
-
-    manager.displayAll();
-}
 }
